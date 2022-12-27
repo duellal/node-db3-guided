@@ -8,7 +8,7 @@ module.exports = {
   remove
 }
 
-function findPosts(user_id) {
+async function findPosts(user_id) {
   /*
     Implement so it resolves this structure:
 
@@ -21,11 +21,33 @@ function findPosts(user_id) {
       etc
     ]
   */
+/*
+ select 
+p.id as post_id,
+contents,
+username
+from posts as p
+join users as u
+on p.user_id = u.id
+*/
+const rows = await db('posts as p')
+    .select('p.id as post_id', 'contents', 'username')
+    .join('users as u', `p.user_id`, `=`, `u.id`)
+    .where('u.id', user_id)
+
+    return rows
 }
 
-function find() {
-  return db('users')
-  /*
+
+async function find() {
+  const users = await db('users as u')
+    .leftJoin('posts as p', 'u.id', '=', 'p.user_id')
+    .count('p.id as post_count')
+    .groupBy('u.id')
+    .select('u.id as user_id', 'username')
+
+    return users
+    /*
     Improve so it resolves this structure:
 
     [
@@ -44,8 +66,24 @@ function find() {
   */
 }
 
-function findById(id) {
-  return db('users').where({ id }).first()
+async function findById(id) {
+  const userId = await db('users as u')
+    .leftJoin('posts as p', 'u.id', 'p.user_id')
+    .select(
+      'u.id as user_id', 
+      'username', 
+      'contents', 
+      'p.id as post_id')
+    .where('u.id', id)
+
+    let result = userId.reduce((acc, row) => {
+      if (row.contents){
+        acc.posts.push({contents: row.contents, post_id: row.post_id})
+      }
+      return acc
+      }, {user_id: userId[0].user_id, username:userId[0].username, posts: []})
+
+  return result
   /*
     Improve so it resolves this structure:
 
